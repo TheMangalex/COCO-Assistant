@@ -75,6 +75,24 @@ class COCO_Assistant:
         dst_ann = resann_dir / "merged.json"
 
         print("Merging annotations")
+
+        # Creating an alphabetical annotation list first
+        labels = []
+        for j in tqdm(self.dh.names):
+            cj = self.anndict[j].dataset
+            for category in cj['categories']:
+                if not category['name'] in labels:
+                    labels.append(category['name'])
+
+        labels.sort()
+        print(f"Sorted labels alphabetically {labels}")
+
+
+        cann["categories"] = []
+        for i in range(len(labels)):
+            cann["categories"].append({"id": i + 1, "name": labels[i]})
+            
+
         for j in tqdm(self.dh.names):
             cj = self.anndict[j].dataset
 
@@ -83,12 +101,18 @@ class COCO_Assistant:
             # If it is, continue else modify current annotation
             if ind == 0:
                 cann["images"] = cann["images"] + cj["images"]
+
+                # Remap categories
+                cmapper = utils.CatRemapper(cann["categories"], cj["categories"])
+                cann["categories"], cj["annotations"] = cmapper.remap(cj["annotations"])
+
                 cann["annotations"] = cann["annotations"] + cj["annotations"]
                 if "info" in list(cj.keys()):
                     cann["info"] = cj["info"]
                 if "licenses" in list(cj.keys()):
                     cann["licenses"] = cj["licenses"]
-                cann["categories"] = sorted(cj["categories"], key=lambda i: i["id"])
+                #cann["categories"] = sorted(cj["categories"], key=lambda i: i["id"])
+                
 
                 last_imid = cann["images"][-1]["id"]
                 last_annid = cann["annotations"][-1]["id"]
